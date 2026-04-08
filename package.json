@@ -1,0 +1,31 @@
+{
+  "name": "qtr",
+  "version": "1.0.0",
+  "description": "SpeakerQuarter CLI - Windows ses cihazlarini komut satirindan yonetin",
+  "main": "src/index.js",
+  "bin": {
+    "qtr": "./bin/qtr.js"
+  },
+  "scripts": {
+    "start": "node bin/qtr.js",
+    "test": "node test/run.js"
+  },
+  "keywords": [
+    "speakerquarter",
+    "cli",
+    "audio",
+    "qtr",
+    "windows",
+    "speaker"
+  ],
+  "author": "Recep Samet Yildiz <https://github.com/ThePecerowski>",
+  "license": "MIT",
+  "os": ["win32"],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThePecerowski/QTR-CLI.git"
+  }
+}

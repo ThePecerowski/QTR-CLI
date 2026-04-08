@@ -1,0 +1,26 @@
+# npm publish icin hangi dosyalarin pakete dahil olmayacagini belirtir
+
+# Gelistirme ve test dosyalari
+test/
+*.test.js
+
+# Memory bank ve proje notlari
+memory-bank-CLI/
+About-Project/
+Yapilacaklar/
+
+# Editor/IDE ayarlari
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Gecici dosyalar
+*.log
+*.tmp
+*.bak
+
+# Git
+.git/
+.gitignore
+.gitattributes
