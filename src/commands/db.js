@@ -529,6 +529,12 @@ function cmdSeed(projectRoot, cfg, targetClass) {
     process.exitCode = 1; return;
   }
 
+  if (!cfg.db.name) {
+    console.error('[QTR] .qtr.json içinde "db.name" boş.');
+    console.error('      .qtr.json dosyasında veritabanı adını girin.');
+    process.exitCode = 1; return;
+  }
+
   const seedersDir = path.join(projectRoot, 'database', 'seeders');
 
   if (!fs.existsSync(seedersDir)) {
@@ -569,6 +575,19 @@ function cmdSeed(projectRoot, cfg, targetClass) {
 
   for (const file of seederFiles) {
     const sqlContent = fs.readFileSync(path.join(seedersDir, file), 'utf-8');
+
+    // Etkili SQL satırı yok mu? (tamamı yorum/boş — henüz düzenlenmemiş şablon)
+    const effectiveSql = sqlContent
+      .split('\n')
+      .filter(l => l.trim() && !l.trim().startsWith('--'))
+      .join('\n')
+      .trim();
+
+    if (!effectiveSql) {
+      console.log(`  ⚠  ${file.padEnd(pad)} atlandı (henüz düzenlenmemiş — sadece yorum satırları var)`);
+      continue;
+    }
+
     try {
       runSqlContent(cfg, sqlContent);
       console.log(`  ✓  ${file.padEnd(pad)} seeded`);
