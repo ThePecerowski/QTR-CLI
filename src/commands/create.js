@@ -3,6 +3,7 @@
 const fs   = require('fs');
 const path = require('path');
 const readline = require('readline');
+const bcrypt   = require('bcryptjs');
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -239,12 +240,6 @@ function scaffoldProject(projectPath, config, isDryRun) {
   const storageHta = 'Deny from all\n';
   fs.writeFileSync(path.join(projectPath, 'storage/.htaccess'), storageHta, 'utf-8');
 
-  // db_runner.php — PDO ile SQL çalıştıran PHP yardımcısı
-  const dbRunnerSrc = path.join(TEMPLATES_DIR, 'config', 'db_runner.php');
-  if (fs.existsSync(dbRunnerSrc)) {
-    fs.copyFileSync(dbRunnerSrc, path.join(projectPath, 'app/scripts/php/db_runner.php'));
-  }
-
   // Config.php — .env okuma sınıfı
   const configSrc = path.join(TEMPLATES_DIR, 'config', 'Config.php');
   if (fs.existsSync(configSrc)) {
@@ -418,18 +413,12 @@ function scaffoldProject(projectPath, config, isDryRun) {
     fs.writeFileSync(destCss, '/* QTR Framework — Başlangıç CSS dosyası */\n', 'utf-8');
   }
 
-  // database/seeders/ dizinini oluştur + UsersSeeder.php kopyala
+  // database/seeders/ dizinini oluştur + UsersSeeder.sql yaz (bcrypt hashli şifrelerle)
   fs.mkdirSync(path.join(projectPath, 'database/seeders'), { recursive: true });
-  const usersSeederSrc = path.join(TEMPLATES_DIR, 'config', 'seeders', 'UsersSeeder.php');
-  if (fs.existsSync(usersSeederSrc)) {
-    fs.copyFileSync(usersSeederSrc, path.join(projectPath, 'database/seeders/UsersSeeder.php'));
-  }
-
-  // seed-runner.php — CLI seedleri PHP ile çalıştıran yardımcı
-  const seedRunnerSrc = path.join(TEMPLATES_DIR, 'config', 'seed-runner.php');
-  if (fs.existsSync(seedRunnerSrc)) {
-    fs.copyFileSync(seedRunnerSrc, path.join(projectPath, 'app/scripts/php/seed-runner.php'));
-  }
+  const adminHash = bcrypt.hashSync('admin123', 10);
+  const testHash  = bcrypt.hashSync('test123',  10);
+  const usersSeederSql = `-- QTR Framework — Users Seeder\n-- Çalıştırmak için: qtr db:seed --class=UsersSeeder\n-- Şifreler bcrypt (cost=10) ile hashlenmiştir.\n\nINSERT IGNORE INTO \`users\` (\`name\`, \`email\`, \`password\`) VALUES\n  ('Admin',     'admin@example.com', '${adminHash}'),\n  ('Test User', 'test@example.com',  '${testHash}');\n`;
+  fs.writeFileSync(path.join(projectPath, 'database/seeders/UsersSeeder.sql'), usersSeederSql, 'utf-8');
 }
 
 // ─── Ana execute ─────────────────────────────────────────────────────────────

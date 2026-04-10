@@ -2,7 +2,6 @@
 
 const fs   = require('fs');
 const path = require('path');
-const { execSync, spawnSync } = require('child_process');
 
 // ─── Sabitler ────────────────────────────────────────────────────────────────
 
@@ -19,8 +18,9 @@ cache:classmap
   Production'da autoloader; dosya sistemi taraması yapmadan doğrudan buradan yükler.
 
 cache:routes
-  routes/ dosyalarını PHP ile yükler, oluşan route tablosunu
-  storage/cache/routes.php olarak kaydeder.
+  routes/ dosyalarını (api.php, web.php, admin.php) JavaScript regex ile tarar,
+  oluşan route listesini storage/cache/routes.php olarak kaydeder.
+  PHP gerektirmez — tamamen Node.js ile çalışır.
   Route dosyaları değiştiğinde otomatik geçersiz sayılır.
 
 cache:clear
@@ -47,18 +47,6 @@ function findProjectRoot() {
     dir = path.dirname(dir);
   }
   return null;
-}
-
-/**
- * .qtr.json'dan PHP çalıştırıcı yolunu okur.
- */
-function getPhpBin(root) {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(path.join(root, '.qtr.json'), 'utf-8'));
-    return cfg.php || 'php';
-  } catch {
-    return 'php';
-  }
 }
 
 /**
@@ -143,6 +131,14 @@ function cmdClassmap(params) {
 
 // ─── cache:routes ─────────────────────────────────────────────────────────────
 
+/**
+ * Route dosyalarını regex ile tarar ve routes.php cache'i oluşturur.
+ * PHP gerektirmez.
+ *
+ * Desteklenen format:
+ *   $router->get('/path', 'Controller@method');
+ *   $adminRouter->post('/admin/path', 'Controller@method');
+ */
 function cmdRoutes(params) {
   const root = findProjectRoot();
   if (!root) {
@@ -151,73 +147,67 @@ function cmdRoutes(params) {
     return;
   }
 
-  const phpBin    = getPhpBin(root);
-  if (!phpBin) {
-    console.error('[QTR] PHP binary bulunamadı. .qtr.json içinde "php" alanını kontrol edin.');
-    process.exitCode = 1;
-    return;
-  }
-
-  const exporterSrc = path.join(__dirname, '..', '..', 'templates', 'config', 'route-exporter.php');
-
-  if (!fs.existsSync(exporterSrc)) {
-    console.error('[QTR] route-exporter.php template bulunamadı.');
-    process.exitCode = 1;
-    return;
-  }
-
   console.log('[QTR] Route cache oluşturuluyor...');
 
-  // route-exporter.php'yi geçici olarak proje köküne kopyala
-  const exporterDest = path.join(root, '.qtr-route-exporter.php');
-  fs.copyFileSync(exporterSrc, exporterDest);
+  // Taranacak route dosyaları
+  const routeFiles = [
+    path.join(root, 'routes', 'api.php'),
+    path.join(root, 'routes', 'web.php'),
+    path.join(root, 'routes', 'admin.php'),
+  ].filter(f => fs.existsSync(f));
 
-  try {
-    const result = spawnSync(phpBin, [exporterDest], { cwd: root, encoding: 'utf-8' });
+  if (routeFiles.length === 0) {
+    console.error('[QTR] routes/ altında api.php, web.php veya admin.php bulunamadı.');
+    process.exitCode = 1;
+    return;
+  }
 
-    if (result.status !== 0) {
-      console.error('[QTR] Route export başarısız:');
-      console.error(result.stderr || result.stdout);
-      process.exitCode = 1;
-      return;
-    }
+  // $router->METHOD('pattern', 'Handler@method') regex
+  // değişken adı: herhangi bir $xxxRouter değişkeni
+  // Not: // ile başlayan yorum satırları atlanır
+  const routeRe = /\$\w*[Rr]outer\s*->\s*(get|post|put|delete|patch)\s*\(\s*(['"])([^'"]+)\2\s*,\s*(['"])([^'"]+)\4/gi;
 
-    let routes;
-    try {
-      routes = JSON.parse(result.stdout.trim());
-    } catch {
-      console.error('[QTR] Route export JSON parse hatası:', result.stdout.substring(0, 200));
-      process.exitCode = 1;
-      return;
-    }
-
-    if (!Array.isArray(routes)) {
-      console.error('[QTR] Route export beklenmedik çıktı (dizi değil):');
-      console.error(result.stdout.substring(0, 300));
-      process.exitCode = 1;
-      return;
-    }
-
-    const cacheDir = path.join(root, 'storage', 'cache');
-    fs.mkdirSync(cacheDir, { recursive: true });
-
-    const lines = ['<?php', '// QTR Route Cache', '// Oluşturulma: ' + new Date().toISOString(), 'return ['];
-    for (const r of routes) {
-      const mw      = JSON.stringify(r.middlewares || []);
-      const afterMw = JSON.stringify(r.afterMiddlewares || []);
-      lines.push(`    ['method' => ${JSON.stringify(r.method)}, 'pattern' => ${JSON.stringify(r.pattern)}, 'handler' => ${JSON.stringify(r.handler)}, 'middlewares' => ${mw}, 'afterMiddlewares' => ${afterMw}],`);
-    }
-    lines.push('];', '');
-
-    fs.writeFileSync(path.join(cacheDir, 'routes.php'), lines.join('\n'), 'utf-8');
-    console.log(`[QTR] ✓ routes.php oluşturuldu — ${routes.length} route kaydedildi`);
-
-  } finally {
-    // Geçici exporter'ı temizle
-    if (fs.existsSync(exporterDest)) {
-      fs.unlinkSync(exporterDest);
+  const routes = [];
+  for (const file of routeFiles) {
+    // Yorum satırlarını kaldır, sonra route'ları çıkar
+    const raw     = fs.readFileSync(file, 'utf-8');
+    const content = raw
+      .split('\n')
+      .filter(line => !/^\s*\/\//.test(line))  // tek satır yorumları kaldır
+      .join('\n')
+      .replace(/\/\*[\s\S]*?\*\//g, '');        // blok yorumları kaldır
+    routeRe.lastIndex = 0;
+    let m;
+    while ((m = routeRe.exec(content)) !== null) {
+      routes.push({
+        method:           m[1].toUpperCase(),
+        pattern:          m[3],
+        handler:          m[5],
+        middlewares:      [],
+        afterMiddlewares: [],
+      });
     }
   }
+
+  const cacheDir = path.join(root, 'storage', 'cache');
+  fs.mkdirSync(cacheDir, { recursive: true });
+
+  const lines = ['<?php', '// QTR Route Cache', '// Oluşturulma: ' + new Date().toISOString(), 'return ['];
+  for (const r of routes) {
+    const mw      = phpArray(r.middlewares);
+    const afterMw = phpArray(r.afterMiddlewares);
+    lines.push(`    ['method' => '${r.method}', 'pattern' => '${r.pattern}', 'handler' => '${r.handler}', 'middlewares' => ${mw}, 'afterMiddlewares' => ${afterMw}],`);
+  }
+  lines.push('];', '');
+
+  fs.writeFileSync(path.join(cacheDir, 'routes.php'), lines.join('\n'), 'utf-8');
+  console.log(`[QTR] ✓ routes.php oluşturuldu — ${routes.length} route kaydedildi`);
+}
+
+/** String dizisini PHP array literal'e çevirir: ['a','b'] */
+function phpArray(arr) {
+  if (!arr || arr.length === 0) return '[]';
+  return '[' + arr.map(v => `'${v}'`).join(', ') + ']';
 }
 
 // ─── cache:clear ─────────────────────────────────────────────────────────────

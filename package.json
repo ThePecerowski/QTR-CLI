@@ -20,12 +20,17 @@
   ],
   "author": "Recep Samet Yildiz <https://github.com/ThePecerowski>",
   "license": "MIT",
-  "os": ["win32"],
+  "os": [
+    "win32"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/ThePecerowski/QTR-CLI.git"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
   }
 }
