@@ -1,53 +1,27 @@
-# About Project - SpeakerQuarter CLI
+# Hakkında — QTR CLI
 
-## Proje Hakkında
+> Tam ve kapsamlı belge için: d:/Projelerim/QTR_Web_Framework/memory-bank/About-CLI/About-CLI.md
 
-Bu proje bir Node.js CLI eklentisidir. SpeakerQuarter uygulaması için bir CLI aracı olarak geliştirilmektedir.
+## Özet
 
-Ayrı olarak geliştirilecek ancak `qtr` kütüphanesi ile uygulama ile bağlantılı çalışacaktır.
+**QTR CLI**, QTR Framework projelerini yönetmek için geliştirilmiş bir Node.js CLI aracıdır.
 
-## CLI Kütüphanesi
+- **Paket adı:** qtr
+- **Kullanım:** qtr <komut-grubu>:<komut> [parametreler]
+- **Platform:** Öncelikli Windows, ilerleyen süreçte Cross-Platform
+- **Node.js gereksinimi:** >= 18
 
-Kütüphane adı: **qtr** (Quarter)
+## Temel Amaç
 
-## Komutlar
+Geliştirici ne veritabanı kurmak için phpMyAdmin'i elle açmak, ne route dosyasını elle güncellemek, ne de memory-bank'ı elle doldurmak zorunda kalsın. CLI bunları otomatikleştirir.
 
-| Komut | Açıklama |
-|-------|----------|
-| `showd` | Bütün cihazları tablo halinde gösterir (ad, MAC adresi vb.) |
-| `showl` | Bütün cihazları listeler (sıra numarası ve adları) |
-| `band <sıra>` | Cihaz sırasına göre engeller |
-| `unban <sıra>` | Cihaz sırasına göre engeli kaldırır |
-| `stopengine` | Motoru durdurur |
-| `startengine` | Motoru başlatır |
-| `help` | Bütün komutları ve açıklamalarını gösterir |
-| `fix` | CLI ve Uygulama kurulumunda sorun olup olmadığını kontrol eder |
-| `about` | CLI ve Uygulama hakkında genel bilgi verir |
-| `updateA` | Uygulamanın GitHub'dan en son sürümünü indirip günceller |
-| `updateC` | CLI'ın GitHub'dan en son sürümünü indirip günceller |
+## Komut Grupları
 
-## Genel Parametreler
+create, serve, 
+oute:*, db:*, pi:*, dmin:*, ackend:*, security:*, ackup, github:*, mb:*, 
+un, 
+untime:*, ix, help, bout, update
 
-| Parametre | Açıklama |
-|-----------|----------|
-| `--info` | Komutun ne işe yaradığını söyler |
-| `--help` | Komutun hata vermesi durumunda ne yapılabileceğini söyler |
-| `--stime <süre>` | Belirlenen süre sonra komutu çalıştırır |
+## Bağlı Proje
 
-## Özel Parametreler
-
-### fix komutu
-| Parametre | Açıklama |
-|-----------|----------|
-| `--doctor` | Windows'da uygulamanın ve CLI'ın çalışmasına engel bir şey var mı kontrol eder |
-| `--show` | Mevcut sorunların nasıl düzeltileceği hakkında bilgi verir |
-
-## Teknik Bilgiler
-
-- **Dil:** Node.js
-
-## Yapımcı Bilgileri
-
-- **Ad:** Recep Samet Yıldız
-- **Web Site:** https://www.yildizportfolio.com/
-- **GitHub:** https://github.com/ThePecerowski
+[QTR Framework](../../memory-bank/About-Project/about-project.md)

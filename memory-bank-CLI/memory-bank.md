@@ -1,25 +1,20 @@
-Memory Bank ın nasıl doldurulacağı hakkında bilgiler. 
+# Memory-Bank Rehberi — QTR CLI
 
-memory bank her değişiklki sonrasında alakalı dosyalara yapılan güncellemeler hakkında bilgi verecek. 
+Memory-bank, her değişiklik sonrasında alakalı dosyalara yapılan güncellemeleri takip eder.
+Bu sayede yeni açılan her sohbette AI mevcut durumu hızlıca kavrar.
 
-bu sayede yeni açılan her sohbette AI zorlanmayacak. 
+## Kurulum Aşamaları
 
-Memory bank ilk kurulumu iki aşamalı olacak. 
+**Aşama 1 — İskelet:** Mimari, Çalışma Şekli, Parametreler, Fonksiyonlar, Dosyalar, Bağlantılar boş dosya olarak eklenir. ✅ Tamamlandı.
 
-1. iskelet; Mimari, Çalışma Şekli, Parametreler, Fonksiyonlar, Dosyalar, Bağlantılar gibi gibi her şey boş bir dosya olarak eklenir. 
+**Aşama 2 — Doldurma:** Boş dosyaların içeriği proje incelenerek doldurulur.
 
-bu iskelette iki türlü dosya bulunur. 
+## Dosya Türleri
 
-1. Current- Dosyaları 
-2. Project- Dosyaları
+**Current- Dosyaları:** Projenin o alan üzerinde yapılan değişiklikler tutulur.
 
-Current Dosyaları; nın içeriğinde ne olur. Projenin o alan üzerinde belirtilen şekilde yapılan değişiklikler burada tutulur.
+**Project- Dosyaları:** Projenin mevcut halinde o alanın ne işe yaradığı, ne amaçla yapıldığı, nasıl çalıştığı anlatılır.
 
-Project Dosyaları; nın içeriğinde ne olur. Projenin mevcut halinde o alanın ne işe yaradığı, ne amaçla yapıldığı, nasıl çalıştığı kod ve teknik açıdan anlatılır.
+## Tam Belge
 
-2. Bu boş dosyaalrın içeriği proje incelenerek doldurulur. 
-
-Bu dosyalar da şunlar bulunur. Değişiklik tarihi, amacı, nerede yapıldığı.
-
-3. Bu işlemler hem launcher hem de Uygulama için de ayrı yapılacaktır. Launcher ve Uygulama ayrı memory banka sahiptir. 
-
+Bkz. HowToUse.md

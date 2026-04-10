@@ -1,12 +1,17 @@
-# Current - Durum (SpeakerQuarter CLI)
+# Current — Durum (QTR CLI)
 
-> Projenin CLI tarafının mevcut durumu burada tutulur.
+> CLI projesinin mevcut geliştirme durumu burada tutulur.
 
 ## Mevcut Durum
 
-_Proje henüz geliştirme aşamasında değil. İskelet oluşturma aşamasında._
+**Aşama:** Memory-bank Aşama 1 tamamlandı. Komut geliştirmesi başlamadı.
+
+**Öncelikli Görevler:**
+1. Project- dosyalarını doldur (Aşama 2)
+2. Mevcut komutları (src/commands/) About-CLI.md'deki yeni komut tablosuyla karşılaştır
+3. Eksik komutları geliştir
 
 ## Son Güncelleme
 
-- **Tarih:** -
-- **Durum:** Planlama aşaması
+- **Tarih:** 09.04.2026
+- **Durum:** Planlama / Belgeleme aşaması
