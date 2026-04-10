@@ -10,7 +10,7 @@
 
 class AdminAuthMiddleware
 {
-    public static function handle(): void
+    public static function handle(array $params = []): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();

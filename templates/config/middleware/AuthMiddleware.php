@@ -10,7 +10,7 @@
 
 class AuthMiddleware
 {
-    public static function handle(): bool
+    public static function handle(array $params = []): bool
     {
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         $token  = '';

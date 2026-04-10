@@ -9,21 +9,15 @@
 defined('QTR_ROOT')    || define('QTR_ROOT', __DIR__);
 defined('QTR_VERSION') || define('QTR_VERSION', '1.0.0');
 
-// Config sınıfını yükle (.env okuma + Config::get())
+// Config sınıfını yükle (.env okuma + Config::get()) — Autoloader'dan önce zorunlu
 require_once QTR_ROOT . '/app/core/Config.php';
 
+// Autoloader — tüm sınıfları otomatik yükler (require_once gerekmez)
+require_once QTR_ROOT . '/app/core/Autoloader.php';
+QtrAutoloader::init();
+
 // Hata işleyicisini kaydet (APP_DEBUG'a göre detaylı veya kullanıcı dostu hata)
-require_once QTR_ROOT . '/app/core/ErrorHandler.php';
 ErrorHandler::register();
-
-// View yardımcı sınıfını yükle
-require_once QTR_ROOT . '/app/core/View.php';
-
-// BaseModel — tüm modeller bu sınıfı extend eder
-require_once QTR_ROOT . '/app/models/BaseModel.php';
-
-// JsonResponse — API controller'lar için standart yanıt yardımcısı
-require_once QTR_ROOT . '/app/api/responses/JsonResponse.php';
 
 // Debug modunda PHP hata raporlamasını aç
 $debug = Config::isDebug();

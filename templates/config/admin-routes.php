@@ -3,38 +3,52 @@
  * QTR Framework — Admin Router
  * /admin/* isteklerini ilgili controller'a yönlendirir.
  *
- * Güvenlik: AdminAuthMiddleware tüm /admin/* için oturum zorunlu kılar.
+ * Middleware zinciri:
+ *   - 'cors'  → CORS başlıkları (tüm admin route'ları için)
+ *   - 'admin' → AdminAuthMiddleware — login/logout hariç oturum zorunlu
+ *
+ * Yeni admin modülü eklemek için:
+ *   $adminRouter->get('/admin/resource',         'AdminResourceController@index')
+ *               ->middleware('admin');   // grup içindeyse otomatik eklenir
  */
 
 require_once QTR_ROOT . '/app/core/Router.php';
 
-$adminRouter = new QtrRouter();
-
-// ─── Auth (middleware gerektirmeyen route'lar) ────────────────────────────────
-$adminRouter->get('/admin/login',   'AdminAuthController@loginForm');
-$adminRouter->post('/admin/login',  'AdminAuthController@login');
-$adminRouter->get('/admin/logout',  'AdminAuthController@logout');
-
-// ─── Auth Middleware — login dışındaki tüm admin isteklerinde oturum kontrol ──
-$url = isset($_GET['url']) ? rtrim($_GET['url'], '/') : '';
-if ($url !== 'admin/login' && $url !== 'admin/logout') {
-    require_once QTR_ROOT . '/app/admin/middleware/AdminAuthMiddleware.php';
-    AdminAuthMiddleware::handle();
+if (file_exists(QTR_ROOT . '/app/core/MiddlewareRegistry.php')) {
+    require_once QTR_ROOT . '/app/core/MiddlewareRegistry.php';
 }
 
-// ─── Dashboard ───────────────────────────────────────────────────────────────
-$adminRouter->get('/admin',           'AdminDashboardController@index');
-$adminRouter->get('/admin/dashboard', 'AdminDashboardController@index');
+$adminRouter = new QtrRouter();
 
-// ─── Modüller (qtr admin:add-module ile eklenecek) ───────────────────────────
-// $adminRouter->get('/admin/users',            'AdminUsersController@index');
-// $adminRouter->get('/admin/users/{id}',       'AdminUsersController@show');
-// $adminRouter->post('/admin/users',           'AdminUsersController@store');
-// $adminRouter->put('/admin/users/{id}',       'AdminUsersController@update');
-// $adminRouter->delete('/admin/users/{id}',    'AdminUsersController@destroy');
+// Global: CORS tüm admin route'larda
+$adminRouter->globalMiddleware('cors');
 
-// ─── Ayarlar ─────────────────────────────────────────────────────────────────
-// $adminRouter->get('/admin/settings',         'AdminSettingsController@index');
-// $adminRouter->post('/admin/settings',        'AdminSettingsController@update');
+// ─── Auth gerektirmeyen route'lar ────────────────────────────────────────────
+$adminRouter->get('/admin/login',  'AdminAuthController@loginForm');
+$adminRouter->post('/admin/login', 'AdminAuthController@login');
+$adminRouter->get('/admin/logout', 'AdminAuthController@logout');
 
-$adminRouter->dispatch();
+// ─── Auth gerektiren route'lar (grup ile toplu middleware) ───────────────────
+$adminRouter->group(['middleware' => ['admin']], function ($r) {
+
+    // Dashboard
+    $r->get('/admin',           'AdminDashboardController@index');
+    $r->get('/admin/dashboard', 'AdminDashboardController@index');
+
+    // ─── Modüller (qtr admin:add-module ile eklenecek) ─────────────────────
+    // $r->get('/admin/users',            'AdminUsersController@index');
+    // $r->get('/admin/users/{id}',       'AdminUsersController@show');
+    // $r->post('/admin/users',           'AdminUsersController@store');
+    // $r->put('/admin/users/{id}',       'AdminUsersController@update');
+    // $r->delete('/admin/users/{id}',    'AdminUsersController@destroy');
+
+    // ─── Ayarlar ─────────────────────────────────────────────────────────────
+    // $r->get('/admin/settings',         'AdminSettingsController@index');
+    // $r->post('/admin/settings',        'AdminSettingsController@update');
+});
+
+// Route exporter modunda dispatch çağırmayacağız
+if (!defined('QTR_EXPORT_ROUTES')) {
+    $adminRouter->dispatch();
+}
+

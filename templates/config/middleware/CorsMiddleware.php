@@ -15,7 +15,7 @@ class CorsMiddleware
     private static array $allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'];
     private static array $allowedHeaders = ['Content-Type', 'Authorization', 'X-Requested-With'];
 
-    public static function handle(): void
+    public static function handle(array $params = []): void
     {
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 

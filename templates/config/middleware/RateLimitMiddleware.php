@@ -34,18 +34,28 @@ class RateLimitMiddleware
 
     // ─── Ana Kontrol ──────────────────────────────────────────────────────────
 
-    public static function handle(): bool
+    /**
+     * @param array $params Parametrik kullanım: ['120'] → istek başına 120/dk limit
+     *   ->middleware('rate-limit:120') şeklinde geçilir.
+     */
+    public static function handle(array $params = []): bool
     {
+        // Parametrik limit: rate-limit:120 → dakikada 120 istek
+        $limit = isset($params[0]) && is_numeric($params[0])
+            ? (int) $params[0]
+            : null;
+
         // Önce API key'i bul
         $apiKey = self::resolveApiKey();
 
         if ($apiKey !== null) {
-            return self::checkLimit('key_' . md5($apiKey), self::$keyLimits[$apiKey] ?? self::$defaultKeyLimit);
+            $maxLimit = $limit ?? (self::$keyLimits[$apiKey] ?? self::$defaultKeyLimit);
+            return self::checkLimit('key_' . md5($apiKey), $maxLimit);
         }
 
         // API key yoksa IP kullan
         $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        return self::checkLimit('ip_' . md5($ip), self::$defaultIpLimit);
+        return self::checkLimit('ip_' . md5($ip), $limit ?? self::$defaultIpLimit);
     }
 
     // ─── Yardımcılar ──────────────────────────────────────────────────────────

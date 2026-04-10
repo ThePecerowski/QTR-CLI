@@ -19,7 +19,7 @@ class ApiKeyMiddleware
     /**
      * Geçerli API key yoksa 401 döndürür.
      */
-    public static function handle(): void
+    public static function handle(array $params = []): void
     {
         $key = self::extractKey();
         if ($key === null || !self::isValidKey($key)) {

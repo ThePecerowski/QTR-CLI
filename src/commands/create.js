@@ -45,6 +45,7 @@ const SCAFFOLD_DIRS = [
   'database',
   'storage/logs',
   'storage/backups',
+  'storage/cache',
   'public',
   'memory-bank',
   'tests',
@@ -247,6 +248,18 @@ function scaffoldProject(projectPath, config, isDryRun) {
   const configSrc = path.join(TEMPLATES_DIR, 'config', 'Config.php');
   if (fs.existsSync(configSrc)) {
     fs.copyFileSync(configSrc, path.join(projectPath, 'app/core/Config.php'));
+  }
+
+  // Autoloader.php — PSR-4 otomatik sınıf yükleme
+  const autoloaderSrc = path.join(TEMPLATES_DIR, 'config', 'Autoloader.php');
+  if (fs.existsSync(autoloaderSrc)) {
+    fs.copyFileSync(autoloaderSrc, path.join(projectPath, 'app/core/Autoloader.php'));
+  }
+
+  // MiddlewareRegistry.php — middleware isim-sınıf eşleştirme
+  const mwRegistrySrc = path.join(TEMPLATES_DIR, 'config', 'MiddlewareRegistry.php');
+  if (fs.existsSync(mwRegistrySrc)) {
+    fs.copyFileSync(mwRegistrySrc, path.join(projectPath, 'app/core/MiddlewareRegistry.php'));
   }
 
   // Router.php — QtrRouter sınıfı (URL dispatching)
