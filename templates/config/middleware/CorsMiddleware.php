@@ -17,11 +17,15 @@ class CorsMiddleware
 
     public static function handle(): void
     {
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-        if (static::$allowedOrigins === ['*'] || in_array($origin, static::$allowedOrigins, true)) {
+        if (static::$allowedOrigins === ['*']) {
+            header('Access-Control-Allow-Origin: *');
+        } elseif ($origin !== '' && in_array($origin, static::$allowedOrigins, true)) {
             header('Access-Control-Allow-Origin: ' . $origin);
+            header('Vary: Origin');
         }
+
         header('Access-Control-Allow-Methods: ' . implode(', ', static::$allowedMethods));
         header('Access-Control-Allow-Headers: ' . implode(', ', static::$allowedHeaders));
         header('Access-Control-Max-Age: 86400');

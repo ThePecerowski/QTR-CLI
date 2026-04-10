@@ -92,6 +92,7 @@ class ErrorHandler
     private static function debugPage(string $type, string $message, string $file, int $line, string $trace): string
     {
         $esc = fn(string $s) => htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $traceHtml = $trace ? '<div class="label">Stack Trace</div><pre>' . $esc($trace) . '</pre>' : '';
         return <<<HTML
 <!DOCTYPE html>
 <html lang="tr"><head><meta charset="utf-8">
@@ -112,7 +113,7 @@ class ErrorHandler
   <div class="label">Mesaj</div>
   <div class="msg">{$esc($message)}</div>
   <div class="loc">{$esc($file)} : {$line}</div>
-  {$( $trace ? '<div class="label">Stack Trace</div><pre>' . $esc($trace) . '</pre>' : '' )}
+  {$traceHtml}
 </div></div></body></html>
 HTML;
     }

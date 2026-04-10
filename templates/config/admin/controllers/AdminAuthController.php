@@ -13,8 +13,12 @@ class AdminAuthController
 {
     public function loginForm(array $params = []): void
     {
-        // Zaten oturum açıksa dashboard'a yönlendir
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        // Güvenli oturum başlat
+        if (class_exists('SessionSecurity')) {
+            SessionSecurity::start();
+        } elseif (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         if (!empty($_SESSION['admin_user'])) {
             header('Location: /admin');
             exit;
@@ -29,17 +33,34 @@ class AdminAuthController
 
     public function login(array $params = []): void
     {
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (class_exists('SessionSecurity')) {
+            SessionSecurity::start();
+        } elseif (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // CSRF doğrulaması
+        if (class_exists('CsrfToken') && !CsrfToken::verify($_POST['_token'] ?? '')) {
+            View::render('admin/login', ['error' => 'CSRF token geçersiz. Sayfayı yenileyip tekrar deneyin.'], null);
+            return;
+        }
 
         $email    = trim($_POST['email']    ?? '');
         $password = trim($_POST['password'] ?? '');
 
-        // TODO: gerçek DB kontrolü buraya (UserModel::findByEmail + password_verify)
-        // Şimdilik .env'den basit admin kontrol
+        // .env'den admin bilgileri — ADMIN_PASSWORD düz metin veya bcrypt hash olabilir
         $adminEmail = Config::get('ADMIN_EMAIL', 'admin@example.com');
         $adminPass  = Config::get('ADMIN_PASSWORD', 'changeme');
 
-        if ($email === $adminEmail && password_verify($password, $adminPass)) {
+        // Şifre kontrolü: bcrypt hash ise password_verify, değilse düz karşılaştır
+        $passOk = false;
+        if (strlen($adminPass) === 60 && str_starts_with($adminPass, '$2')) {
+            $passOk = password_verify($password, $adminPass);
+        } else {
+            $passOk = hash_equals($adminPass, $password);
+        }
+
+        if ($email === $adminEmail && $passOk) {
             session_regenerate_id(true);
             $_SESSION['admin_user'] = [
                 'email' => $email,

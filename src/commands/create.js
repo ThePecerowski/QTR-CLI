@@ -255,6 +255,12 @@ function scaffoldProject(projectPath, config, isDryRun) {
     fs.copyFileSync(routerSrc, path.join(projectPath, 'app/core/Router.php'));
   }
 
+  // HealthController.php — /api/health endpointi
+  const healthSrc = path.join(TEMPLATES_DIR, 'config', 'HealthController.php');
+  if (fs.existsSync(healthSrc)) {
+    fs.copyFileSync(healthSrc, path.join(projectPath, 'app/api/controllers/HealthController.php'));
+  }
+
   // ErrorHandler.php — hata yönetim sınıfı
   const errorHandlerSrc = path.join(TEMPLATES_DIR, 'config', 'ErrorHandler.php');
   if (fs.existsSync(errorHandlerSrc)) {

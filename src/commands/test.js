@@ -3,6 +3,7 @@
 const fs       = require('fs');
 const path     = require('path');
 const http     = require('http');
+const https    = require('https');
 const { execFileSync, spawnSync } = require('child_process');
 
 const QTR_JSON = '.qtr.json';
@@ -122,7 +123,8 @@ function httpRequest(urlOrPath, method, opts = {}) {
     };
 
     const t0 = Date.now();
-    const req = http.request(reqOpts, (res) => {
+    const transport = protocol === 'https:' ? https : http;
+    const req = transport.request(reqOpts, (res) => {
       let raw = '';
       res.on('data', chunk => { raw += chunk; });
       res.on('end', () => {
@@ -147,7 +149,7 @@ function httpRequest(urlOrPath, method, opts = {}) {
 }
 
 async function cmdApiTest(params) {
-  const args = params._args || [];
+  const args = params.args || [];
   const urlOrPath = args[0];
   const method    = (args[1] || 'GET').toUpperCase();
 
@@ -197,14 +199,14 @@ function parseApiRoutes(root) {
   const content = fs.readFileSync(apiRoutesFile, 'utf-8');
   const routes  = [];
 
-  // Route::get('/path', veya Route::post('/path', vb.
-  const re = /Route::(get|post|put|delete|patch)\s*\(\s*['"]([^'"]+)['"]/gi;
+  // $router->get('/api/path', 'Controller@method'); formatını parse et
+  const re = /\$router->(get|post|put|delete|patch)\s*\(\s*['"]([^'"]+)['"]/gi;
   let m;
   while ((m = re.exec(content)) !== null) {
     const method = m[1].toUpperCase();
     let   rpath  = m[2];
-    // Prefix /api yoksa ekle
-    if (!rpath.startsWith('/api')) rpath = '/api' + (rpath.startsWith('/') ? rpath : '/' + rpath);
+    // {id} gibi parametreleri atla (test-suite'te ID'siz test eder)
+    if (rpath.includes('{')) continue;
     routes.push({ method, path: rpath });
   }
   return routes;
@@ -220,7 +222,7 @@ async function cmdApiTestSuite(params) {
 
   const routes = parseApiRoutes(root);
   if (routes.length === 0) {
-    console.log('routes/api.php dosyasinda test edilecek Route:: satiri bulunamadi.');
+    console.log('routes/api.php dosyasinda test edilecek $router route satiri bulunamadi.');
     return;
   }
 
@@ -317,7 +319,7 @@ function cmdTestRun(params) {
     return;
   }
 
-  const args   = params._args || [];
+  const args   = params.args || [];
   const target = args[0] || null;
   const cmdArgs = target ? [target] : [];
 

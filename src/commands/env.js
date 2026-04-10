@@ -65,10 +65,25 @@ function parseEnv(filePath) {
   return result;
 }
 
-/** .env dosyasını {key: value} nesnesinden yeniden üretir */
-function writeEnv(filePath, map) {
-  const lines = Object.entries(map).map(([k, v]) => `${k}=${v}`);
-  fs.writeFileSync(filePath, lines.join('\n') + '\n', 'utf-8');
+/** .env dosyasında belirli bir key'in değerini günceller, yoksa ekler. Yorum ve yapıyı korur. */
+function setEnvValue(filePath, key, value) {
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, `${key}=${value}\n`, 'utf-8');
+    return;
+  }
+  const lines   = fs.readFileSync(filePath, 'utf-8').split('\n');
+  let found = false;
+  const updated = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return line;
+    const idx = trimmed.indexOf('=');
+    if (idx === -1) return line;
+    const k = trimmed.slice(0, idx).trim();
+    if (k === key) { found = true; return `${key}=${value}`; }
+    return line;
+  });
+  if (!found) updated.push(`${key}=${value}`);
+  fs.writeFileSync(filePath, updated.join('\n'), 'utf-8');
 }
 
 /** Değeri maskelemesi gerekiyor mu? */
@@ -140,11 +155,9 @@ function cmdSet(projectRoot, key, value) {
     console.log(`  [UYARI] "${key}" kritik bir ayardir. Degistirmek sistemi etkileyebilir.`);
   }
 
-  const map = parseEnv(envPath);
   const upperKey = key.toUpperCase();
 
-  map[upperKey] = value ?? '';
-  writeEnv(envPath, map);
+  setEnvValue(envPath, upperKey, value ?? '');
 
   const display = isSensitive(upperKey) ? maskValue(String(value)) : (value ?? '(bos)');
   console.log(`[ENV SET] ${upperKey} = ${display}`);

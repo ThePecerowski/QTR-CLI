@@ -418,6 +418,10 @@ async function execute(params) {
 
   const modName = () => {
     const raw = (params.args || []).find(a => !a.startsWith('--')) || '';
+    if (!raw) {
+      console.log('[ADMIN] Modul adi gerekli. Ornek: qtr admin:add-module Blog');
+      process.exit(1);
+    }
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   };
 

@@ -7,14 +7,20 @@
  */
 
 require_once QTR_ROOT . '/app/core/Router.php';
-require_once QTR_ROOT . '/app/admin/middleware/AdminAuthMiddleware.php';
 
 $adminRouter = new QtrRouter();
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
+// ─── Auth (middleware gerektirmeyen route'lar) ────────────────────────────────
 $adminRouter->get('/admin/login',   'AdminAuthController@loginForm');
 $adminRouter->post('/admin/login',  'AdminAuthController@login');
 $adminRouter->get('/admin/logout',  'AdminAuthController@logout');
+
+// ─── Auth Middleware — login dışındaki tüm admin isteklerinde oturum kontrol ──
+$url = isset($_GET['url']) ? rtrim($_GET['url'], '/') : '';
+if ($url !== 'admin/login' && $url !== 'admin/logout') {
+    require_once QTR_ROOT . '/app/admin/middleware/AdminAuthMiddleware.php';
+    AdminAuthMiddleware::handle();
+}
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 $adminRouter->get('/admin',           'AdminDashboardController@index');

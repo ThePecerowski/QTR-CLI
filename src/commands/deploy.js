@@ -146,16 +146,17 @@ async function cmdDeployCheck(params) {
 
   // 7. Guvenlik katmanlari kontrol
   const security = (cfg && cfg.security) || {};
-  const layers   = security.layers || {};
-  const totalLayers = Object.keys(layers).length;
-  const disabledCount = Object.values(layers).filter(l => !l.enabled).length;
-  const secOk = totalLayers > 0 && disabledCount === 0;
+  // security doğrudan flat objedir: { mode, csrf: true, xss: true, ... }
+  const securityKeys = ['input_validation', 'sql_injection', 'xss', 'csrf', 'auth', 'rate_limit', 'api_security', 'file_upload', 'debug_protection', 'config_protection'];
+  const enabledLayers  = securityKeys.filter(k => security[k] === true);
+  const disabledLayers = securityKeys.filter(k => security[k] !== true);
+  const secOk = enabledLayers.length > 0 && disabledLayers.length === 0;
   checks.push({
     label:  'Guvenlik katmanlari aktif',
     ok:     secOk,
-    detail: totalLayers === 0
+    detail: enabledLayers.length === 0
       ? 'Guvenlik kurulmamis — qtr security:fix'
-      : (disabledCount > 0 ? `${disabledCount} katman devre disi — qtr security:mode strict` : ''),
+      : (disabledLayers.length > 0 ? `${disabledLayers.length} katman devre disi (${disabledLayers.join(', ')}) — qtr security:mode strict` : ''),
   });
 
   // 8. DB baglantisi (PHP PDO testi — PHP binary gerektirir)
@@ -165,7 +166,7 @@ async function cmdDeployCheck(params) {
     const host = db.host || 'localhost';
     const port = db.port || 3306;
     const user = db.user || 'root';
-    const pass = (db.pass || '').replace(/'/g, "\\'");
+    const pass = (db.pass || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     const phpCode = [
       `try {`,

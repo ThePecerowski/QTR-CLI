@@ -83,9 +83,13 @@ class ApiKeyMiddleware
 
     private static function reject(string $message): never
     {
-        http_response_code(401);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['error' => $message, 'code' => 401]);
-        exit;
+        if (class_exists('JsonResponse')) {
+            JsonResponse::unauthorized($message);
+        } else {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $message, 'error_code' => 'UNAUTHORIZED'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
     }
 }

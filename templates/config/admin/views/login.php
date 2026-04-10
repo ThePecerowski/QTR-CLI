@@ -34,6 +34,10 @@
   <?php endif; ?>
 
   <form method="POST" action="/admin/login">
+    <?php if (class_exists('CsrfToken')): ?>
+      <input type="hidden" name="_token" value="<?php echo CsrfToken::generate(); ?>">
+    <?php endif; ?>
+
     <label for="email">E-posta</label>
     <input type="email" id="email" name="email" required autocomplete="email">
 

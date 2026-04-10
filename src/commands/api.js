@@ -138,6 +138,7 @@ class ${name}Controller
 }
 
 function modelTemplate(name) {
+  const table = name.replace(/([A-Z])/g, (m, c, i) => (i > 0 ? '_' : '') + c.toLowerCase()).replace(/^_/, '') + 's';
   return `<?php
 /**
  * ${name}Model
@@ -156,7 +157,7 @@ class ${name}Model extends BaseModel
     //     return static::where('slug = ?', [$slug])[0] ?? null;
     // }
 }
-`.replace(/\${name}/g, name).replace(/\${table}/g, name.replace(/([A-Z])/g, (m, c, i) => (i > 0 ? '_' : '') + c.toLowerCase()).replace(/^_/, '') + 's');
+`;
 }
 
 function serviceTemplate(name) {
@@ -543,10 +544,7 @@ function execute(params) {
 
   const sub      = params._subcommand;
   const isDryRun = params['dry-run'] === true || (params.args || []).includes('--dry-run');
-  const version  = (() => {
-    const vArg = (params.args || []).find(a => a.startsWith('--version='));
-    return vArg ? vArg.split('=')[1] : null;
-  })();
+  const version  = params.version || null;
 
   if (!sub) { console.log(HELP_TEXT); return; }
 

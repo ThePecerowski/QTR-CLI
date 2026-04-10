@@ -23,13 +23,16 @@ security komutu alt komutlari:
   security:disable-all   -- TEHLİKELİ — tüm güvenlikleri kapatır (uzun onay).
 
 Güvenlik katmanları (tur):
-  csrf          -- CSRF token koruması
-  xss           -- XSS çıkış encode
-  rate-limit    -- IP bazlı istek sınırlama
-  api-key       -- API key doğrulama
-  session       -- Oturum güvenliği (regenerate, timeout, IP)
-  file-upload   -- Dosya yükleme koruması
-  debug-mask    -- Üretimde hata detaylarını maskele
+  input_validation  -- Giriş doğrulama
+  sql_injection     -- SQL Injection koruması
+  csrf              -- CSRF token koruması
+  xss               -- XSS çıkış encode
+  auth              -- Kimlik doğrulama
+  rate_limit        -- IP / Key bazlı istek sınırlama
+  api_security      -- API key doğrulama
+  file_upload       -- Dosya yükleme koruması
+  debug_protection  -- Üretimde hata detaylarını maskele
+  config_protection -- Konfigürasyon koruması
 
 Örnekler:
   qtr security:list
@@ -41,20 +44,24 @@ Güvenlik katmanları (tur):
 `;
 
 // Güvenlik katmanları ve varsayılan açıklama / varsayılan durum
+// Key'ler create.js'in .qtr.json'a yazdığı key'lerle eşleşmeli
 const ALL_LAYERS = [
-  { key: 'csrf',        label: 'CSRF Token Koruması',          default: true  },
-  { key: 'xss',         label: 'XSS Encode (htmlspecialchars)',default: true  },
-  { key: 'rate-limit',  label: 'IP Rate Limiting',              default: true  },
-  { key: 'api-key',     label: 'API Key Doğrulama',             default: false },
-  { key: 'session',     label: 'Güvenli Oturum (IP+timeout)',   default: true  },
-  { key: 'file-upload', label: 'Dosya Yükleme Koruması',        default: true  },
-  { key: 'debug-mask',  label: 'Hata Detay Maskeleme (prod)',   default: true  },
+  { key: 'input_validation',  label: 'Giriş Doğrulama',                default: true  },
+  { key: 'sql_injection',     label: 'SQL Injection Koruması',          default: true  },
+  { key: 'csrf',              label: 'CSRF Token Koruması',             default: true  },
+  { key: 'xss',               label: 'XSS Encode (htmlspecialchars)',   default: true  },
+  { key: 'auth',              label: 'Kimlik Doğrulama',                default: true  },
+  { key: 'rate_limit',        label: 'IP / Key Rate Limiting',          default: true  },
+  { key: 'api_security',      label: 'API Key Doğrulama',              default: true  },
+  { key: 'file_upload',       label: 'Dosya Yükleme Koruması',         default: true  },
+  { key: 'debug_protection',  label: 'Hata Detay Maskeleme (prod)',     default: true  },
+  { key: 'config_protection', label: 'Konfigürasyon Koruması',         default: true  },
 ];
 
 const SECURITY_MODES = {
-  strict:   { 'rate-limit': true, 'api-key': true,  'debug-mask': true, 'csrf': true,  label: 'Tüm korumalar aktif, rate limit sıkı.' },
-  balanced: { 'rate-limit': true, 'api-key': false, 'debug-mask': true, 'csrf': true,  label: 'Çoğu koruma aktif, bazı limitler esnek.' },
-  relaxed:  { 'rate-limit': false,'api-key': false, 'debug-mask': false,'csrf': false, label: 'Development modu — debug açık, limitler kapalı.' },
+  strict:   { rate_limit: true, api_security: true,  debug_protection: true, csrf: true,  label: 'Tüm korumalar aktif, rate limit sıkı.' },
+  balanced: { rate_limit: true, api_security: false,  debug_protection: true, csrf: true,  label: 'Çoğu koruma aktif, bazı limitler esnek.' },
+  relaxed:  { rate_limit: false, api_security: false, debug_protection: false, csrf: false, label: 'Development modu — debug açık, limitler kapalı.' },
 };
 
 // ─── Yardımcılar ─────────────────────────────────────────────────────────────

@@ -6,8 +6,8 @@
  * Güvenlik: path traversal, geçersiz sayfa adı ve boş URL koruması mevcuttur.
  */
 
-define('QTR_ROOT', __DIR__);
-define('QTR_VERSION', '1.0.0');
+defined('QTR_ROOT')    || define('QTR_ROOT', __DIR__);
+defined('QTR_VERSION') || define('QTR_VERSION', '1.0.0');
 
 // Config sınıfını yükle (.env okuma + Config::get())
 require_once QTR_ROOT . '/app/core/Config.php';

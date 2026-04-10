@@ -177,15 +177,18 @@ function dumpDatabase(root, destSql) {
     return false;
   }
 
-  // mysqldump
+  // mysqldump — şifreyi MYSQL_PWD env ile geçir (komut satırında görünmez)
   const args = [
     `--host=${DB_HOST}`, `--port=${DB_PORT}`,
-    `--user=${DB_USER}`, `--password=${DB_PASS}`,
+    `--user=${DB_USER}`,
     '--single-transaction', '--skip-comments',
     DB_NAME,
   ];
   try {
-    const r = spawnSync('mysqldump', args, { encoding: 'utf-8' });
+    const r = spawnSync('mysqldump', args, {
+      encoding: 'utf-8',
+      env: { ...process.env, MYSQL_PWD: DB_PASS },
+    });
     if (r.status !== 0) {
       fs.writeFileSync(destSql, `-- mysqldump hatasi: ${r.stderr}\n`, 'utf-8');
       return false;
@@ -211,9 +214,13 @@ function restoreDatabase(root, sqlFile) {
 
   const r = spawnSync('mysql', [
     `--host=${DB_HOST}`, `--port=${DB_PORT}`,
-    `--user=${DB_USER}`, `--password=${DB_PASS}`,
+    `--user=${DB_USER}`,
     DB_NAME,
-  ], { input: fs.readFileSync(sqlFile, 'utf-8'), encoding: 'utf-8' });
+  ], {
+    input: fs.readFileSync(sqlFile, 'utf-8'),
+    encoding: 'utf-8',
+    env: { ...process.env, MYSQL_PWD: DB_PASS },
+  });
 
   if (r.status !== 0) throw new Error(`mysql restore hatası: ${r.stderr}`);
 }
