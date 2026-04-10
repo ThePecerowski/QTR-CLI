@@ -152,6 +152,12 @@ function cmdRoutes(params) {
   }
 
   const phpBin    = getPhpBin(root);
+  if (!phpBin) {
+    console.error('[QTR] PHP binary bulunamadı. .qtr.json içinde "php" alanını kontrol edin.');
+    process.exitCode = 1;
+    return;
+  }
+
   const exporterSrc = path.join(__dirname, '..', '..', 'templates', 'config', 'route-exporter.php');
 
   if (!fs.existsSync(exporterSrc)) {
@@ -181,6 +187,13 @@ function cmdRoutes(params) {
       routes = JSON.parse(result.stdout.trim());
     } catch {
       console.error('[QTR] Route export JSON parse hatası:', result.stdout.substring(0, 200));
+      process.exitCode = 1;
+      return;
+    }
+
+    if (!Array.isArray(routes)) {
+      console.error('[QTR] Route export beklenmedik çıktı (dizi değil):');
+      console.error(result.stdout.substring(0, 300));
       process.exitCode = 1;
       return;
     }
@@ -252,7 +265,7 @@ function execute(params) {
     return;
   }
 
-  const sub = params.subcommand || '';
+  const sub = params._subcommand || params.subcommand || '';
 
   if (sub === 'classmap') return cmdClassmap(params);
   if (sub === 'routes')   return cmdRoutes(params);

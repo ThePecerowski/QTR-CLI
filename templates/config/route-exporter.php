@@ -12,6 +12,13 @@
 // Proje kökü burası
 define('QTR_ROOT', __DIR__);
 define('QTR_VERSION', '1.0.0');
+define('QTR_EXPORT_ROUTES', true);
+
+// ─── Stub sınıflar ────────────────────────────────────────────────────────────
+// JsonResponse::send() gerçek sürümde exit() çağırır. Exporter'da bunu engelle.
+class JsonResponse {
+    public static function __callStatic(string $name, array $args): void { /* no-op in export mode */ }
+}
 
 // Minimal bootstrap — sadece autoload + router
 require_once QTR_ROOT . '/app/core/Config.php';
@@ -28,25 +35,27 @@ if (file_exists(QTR_ROOT . '/app/core/MiddlewareRegistry.php')) {
     require_once QTR_ROOT . '/app/core/MiddlewareRegistry.php';
 }
 
-// Route exporter modu: dispatch çağrılmayacak
-define('QTR_EXPORT_ROUTES', true);
+// Route exporter modu: dispatch çağrılmayacak — define already at top
 
 // ─── API Route'ları ───────────────────────────────────────────────────────────
 $router = new QtrRouter();
 
+ob_start(); // route dosyaları dispatch() çağırabilir; çıktıyı yakala
 if (file_exists(QTR_ROOT . '/routes/api.php')) {
     require QTR_ROOT . '/routes/api.php';
 }
+ob_end_clean(); // dispatch çıktısını at
 
 $apiRoutes = $router->exportRoutes();
 
 // ─── Admin Route'ları ─────────────────────────────────────────────────────────
 $adminRouter = new QtrRouter();
 
-// admin-routes.php dispatch() çağırabilir; bunu engelle
+ob_start();
 if (file_exists(QTR_ROOT . '/routes/admin.php')) {
     @require QTR_ROOT . '/routes/admin.php';
 }
+ob_end_clean();
 
 $adminRoutes = $adminRouter->exportRoutes();
 

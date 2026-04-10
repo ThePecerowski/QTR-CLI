@@ -25,6 +25,15 @@
  *   --version=<v>        => params.version = "v1"
  *   --restore=<deger>    => params.restore = "..."
  *   --delete=<deger>     => params.delete = "..."
+ *   --lines=<n>          => params.lines = "10"
+ *   --level=<seviye>     => params.level = "error"
+ *   --file=<dosya>       => params.file = "app.log"
+ *   --step=<n>           => params.step = "2"
+ *   --class=<sinif>      => params.class = "UsersSeeder"
+ *   --fix                => params.fix = true
+ *   --yes / -y           => params.yes = true
+ *   --<key>=<value>      => params[key] = value  (genel fallback)
+ *   --<flag>             => params[flag] = true   (genel fallback)
  *   <deger>              => params.args dizisine eklenir (orn. band 2)
  *
  * @param {string[]} argv - process.argv'den komut sonrasi gelen kisim
@@ -139,10 +148,24 @@ function parseParams(argv) {
       }
       params.stime = next;
       i++;
+    } else if (token === '--fix') {
+      params.fix = true;
+    } else if (token === '--yes' || token === '-y') {
+      params.yes = true;
+    } else if (token === '--no-cache') {
+      params['no-cache'] = true;
     } else if (!token.startsWith('--')) {
       params.args.push(token);
-    } else {
-      console.warn(`Uyari: "${token}" bilinmeyen bir parametre, gozardi ediliyor.`);
+    } else if (token.startsWith('--') && token.includes('=')) {
+      // Genel --key=value destegi (ornek: --lines=5, --level=error, --file=app.log, --step=2, --class=UsersSeeder)
+      const eqIdx = token.indexOf('=');
+      const key = token.slice(2, eqIdx);
+      const val = token.slice(eqIdx + 1);
+      params[key] = val;
+    } else if (token.startsWith('--')) {
+      // Genel boolean flag destegi (ornek: --verbose, --quiet)
+      const key = token.slice(2);
+      params[key] = true;
     }
   }
 
