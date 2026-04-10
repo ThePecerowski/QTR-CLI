@@ -133,6 +133,7 @@ function scaffoldProject(projectPath, config, isDryRun) {
     { src: '.env.example',       dest: '.env.example'           },
     { src: '.env.example',       dest: '.env'                   },
     { src: '.gitignore',         dest: '.gitignore'             },
+    { src: 'root-index.php',     dest: 'index.php'              },
     { src: 'public-index.php',   dest: 'public/index.php'       },
     { src: 'public-router.php',  dest: 'public/router.php'      },
     { src: 'routes-web.php',     dest: 'routes/web.php'         },

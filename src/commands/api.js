@@ -88,7 +88,14 @@ class ${name}Controller
     /** GET ${prefix} */
     public function index(array $params = []): void
     {
-        $data = ${name}Service::get${name}List();
+        $options = [
+            'page'     => (int) ($_GET['page']     ?? 1),
+            'per_page' => (int) ($_GET['per_page'] ?? 20),
+            'sort'     => $_GET['sort']    ?? 'id',
+            'order'    => $_GET['order']   ?? 'asc',
+            'search'   => $_GET['search']  ?? '',
+        ];
+        $data = ${name}Service::get${name}List($options);
         JsonResponse::success($data);
     }
 
@@ -130,6 +137,28 @@ class ${name}Controller
 `.replace(/\${name}/g, name).replace(/\${prefix}/g, prefix).replace(/\${slug}/g, slug);
 }
 
+function modelTemplate(name) {
+  return `<?php
+/**
+ * ${name}Model
+ * Veritabani katmani. BaseModel'i extend eder.
+ */
+
+class ${name}Model extends BaseModel
+{
+    protected static string $table = '${table}';
+
+    // Protected kolonlar — toplu atamaya kapalı
+    protected static array $fillable = [];
+
+    // Örnek: özel sorgu
+    // public static function findBySlug(string $slug): ?array {
+    //     return static::where('slug = ?', [$slug])[0] ?? null;
+    // }
+}
+`.replace(/\${name}/g, name).replace(/\${table}/g, name.replace(/([A-Z])/g, (m, c, i) => (i > 0 ? '_' : '') + c.toLowerCase()).replace(/^_/, '') + 's');
+}
+
 function serviceTemplate(name) {
   return `<?php
 /**
@@ -137,38 +166,33 @@ function serviceTemplate(name) {
  * Controller asla dogrudan Model kullanmaz.
  */
 
-// require_once QTR_ROOT . '/app/models/${name}Model.php';
+require_once QTR_ROOT . '/app/models/${name}Model.php';
 
 class ${name}Service
 {
-    public static function get${name}List(): array
+    public static function get${name}List(array $options = []): array
     {
-        // return ${name}Model::findAll();
-        return [];
+        return ${name}Model::paginate($options);
     }
 
     public static function get${name}ById(int $id): ?array
     {
-        // return ${name}Model::findById($id);
-        return null;
+        return ${name}Model::findById($id);
     }
 
     public static function create${name}(array $data): int
     {
-        // return ${name}Model::create($data);
-        return 0;
+        return ${name}Model::create($data);
     }
 
     public static function update${name}(int $id, array $data): int
     {
-        // return ${name}Model::update($id, $data);
-        return 0;
+        return ${name}Model::update($id, $data);
     }
 
     public static function delete${name}(int $id): int
     {
-        // return ${name}Model::delete($id);
-        return 0;
+        return ${name}Model::delete($id);
     }
 }
 `.replace(/\${name}/g, name);
@@ -220,9 +244,10 @@ function cmdCreate(root, moduleName, version, isDryRun) {
 
   console.log(`\n[QTR API CREATE] ${name} (${version ? 'v: ' + version : 'versiyonsuz'})`);
 
-  writeIfNew(path.join(root, `app/api/controllers/${name}Controller.php`), controllerTemplate(name, slug, version), isDryRun);
-  writeIfNew(path.join(root, `app/api/services/${name}Service.php`),       serviceTemplate(name), isDryRun);
-  writeIfNew(path.join(root, `app/api/validators/${name}Validator.php`),   validatorTemplate(name), isDryRun);
+  writeIfNew(path.join(root, `app/models/${name}Model.php`),               modelTemplate(name),                       isDryRun);
+  writeIfNew(path.join(root, `app/api/controllers/${name}Controller.php`), controllerTemplate(name, slug, version),    isDryRun);
+  writeIfNew(path.join(root, `app/api/services/${name}Service.php`),       serviceTemplate(name),                     isDryRun);
+  writeIfNew(path.join(root, `app/api/validators/${name}Validator.php`),   validatorTemplate(name),                   isDryRun);
 
   // routes/api.php'ye route bloğu ekle
   if (!isDryRun) {

@@ -1,26 +1,88 @@
 <?php
 /**
  * QTR Framework — RateLimitMiddleware
- * IP bazlı istek limiti. Varsayılan: 60 istek / dakika.
+ *
+ * Önce API key (X-Api-Key header veya ?api_key parametresi) bazlı limit uygular.
+ * API key yoksa IP bazlı limite döner.
+ *
+ * Varsayılan limit: 60 istek / dakika (key bazlı ve IP bazlı ayrı sayaçlar).
  *
  * Kullanım (controller içinde):
- *   require_once QTR_ROOT . '/app/api/middleware/RateLimitMiddleware.php';
  *   if (!RateLimitMiddleware::handle()) return;
+ *
+ * Key bazlı limit özelleştirme:
+ *   RateLimitMiddleware::setKeyLimit('my-key', 120);  // 120 req/min
  */
 
 class RateLimitMiddleware
 {
-    private static int $maxRequests = 60;
-    private static int $windowSec   = 60;
+    /** IP bazlı varsayılan limit */
+    private static int $defaultIpLimit  = 60;
+
+    /** Key bazlı varsayılan limit */
+    private static int $defaultKeyLimit = 60;
+
+    private static int $windowSec = 60;
+
+    /** Belirli key'ler için özel limit haritası [ key => limit ] */
+    private static array $keyLimits = [];
+
+    // ─── Konfigürasyon ────────────────────────────────────────────────────────
+
+    public static function setIpLimit(int $max): void  { self::$defaultIpLimit  = $max; }
+    public static function setKeyLimit(string $key, int $max): void { self::$keyLimits[$key] = $max; }
+
+    // ─── Ana Kontrol ──────────────────────────────────────────────────────────
 
     public static function handle(): bool
     {
-        $ip  = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-        $dir = defined('QTR_ROOT') ? QTR_ROOT . '/storage/rate_limit' : sys_get_temp_dir();
+        // Önce API key'i bul
+        $apiKey = self::resolveApiKey();
 
+        if ($apiKey !== null) {
+            return self::checkLimit('key_' . md5($apiKey), self::$keyLimits[$apiKey] ?? self::$defaultKeyLimit);
+        }
+
+        // API key yoksa IP kullan
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        return self::checkLimit('ip_' . md5($ip), self::$defaultIpLimit);
+    }
+
+    // ─── Yardımcılar ──────────────────────────────────────────────────────────
+
+    /**
+     * İstek headerından veya query string'den API key döner.
+     * Bulunamazsa null döner.
+     */
+    private static function resolveApiKey(): ?string
+    {
+        // 1. X-Api-Key header
+        $header = $_SERVER['HTTP_X_API_KEY'] ?? '';
+        if ($header !== '') return $header;
+
+        // 2. Authorization: Bearer ...
+        $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (str_starts_with($auth, 'Bearer ')) {
+            return trim(substr($auth, 7));
+        }
+
+        // 3. ?api_key= query parametresi
+        $qp = $_GET['api_key'] ?? '';
+        if ($qp !== '') return $qp;
+
+        return null;
+    }
+
+    /**
+     * Verilen identifier için pencere bazlı sayaç kontrolü yapar.
+     * Limit aşılırsa 429 döner ve false return eder.
+     */
+    private static function checkLimit(string $identifier, int $maxRequests): bool
+    {
+        $dir = defined('QTR_ROOT') ? QTR_ROOT . '/storage/rate_limit' : sys_get_temp_dir();
         if (!is_dir($dir)) @mkdir($dir, 0755, true);
 
-        $file = $dir . '/' . md5($ip) . '.json';
+        $file = $dir . '/' . $identifier . '.json';
         $now  = time();
         $data = ['count' => 0, 'window_start' => $now];
 
@@ -28,7 +90,6 @@ class RateLimitMiddleware
             $data = json_decode((string) file_get_contents($file), true) ?: $data;
         }
 
-        // Pencere süresi dolmuşsa sıfırla
         if ($now - (int) $data['window_start'] > static::$windowSec) {
             $data = ['count' => 0, 'window_start' => $now];
         }
@@ -36,9 +97,8 @@ class RateLimitMiddleware
         $data['count']++;
         @file_put_contents($file, json_encode($data), LOCK_EX);
 
-        if ($data['count'] > static::$maxRequests) {
-            http_response_code(429);
-            JsonResponse::error('Cok fazla istek. Lutfen bekleyin.', 429);
+        if ($data['count'] > $maxRequests) {
+            JsonResponse::rateLimited();
             return false;
         }
 

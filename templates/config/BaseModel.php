@@ -75,12 +75,103 @@ class BaseModel
     protected static string $table = '';
 
     /**
+     * true ise create() created_at, update() updated_at otomatik ekler.
+     * Alt sınıfta false yaparak devre dışı bırakılabilir.
+     */
+    protected static bool $timestamps = true;
+
+    /**
      * Tüm kayıtları döner.
      */
     public static function findAll(): array
     {
         $tbl = static::$table;
         return static::query("SELECT * FROM `{$tbl}`")->fetchAll();
+    }
+
+    /**
+     * Sayfalama, sıralama ve arama destekli liste.
+     *
+     * @param array $options {
+     *   page     int    Sayfa numarası (varsayılan: 1)
+     *   per_page int    Sayfa başı kayıt (varsayılan: 20, max: 100)
+     *   sort     string Sıralama sütunu (varsayılan: 'id')
+     *   order    string 'asc' | 'desc' (varsayılan: 'asc')
+     *   search   string Tüm metin sütunlarında LIKE araması
+     * }
+     * @return array { data: array, meta: { page, per_page, total, total_pages } }
+     */
+    public static function paginate(array $options = []): array
+    {
+        $tbl      = static::$table;
+        $page     = max(1, (int) ($options['page']     ?? 1));
+        $perPage  = min(100, max(1, (int) ($options['per_page'] ?? 20)));
+        $order    = strtolower($options['order'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+        $search   = trim((string) ($options['search'] ?? ''));
+        $offset   = ($page - 1) * $perPage;
+
+        // Sıralama — yalnızca alfanümerik ve alt çizgi kabul et (injection koruması)
+        $rawSort  = preg_replace('/[^a-zA-Z0-9_]/', '', $options['sort'] ?? 'id');
+        $sort     = empty($rawSort) ? 'id' : $rawSort;
+
+        $params   = [];
+        $where    = '';
+
+        if ($search !== '') {
+            // Tablonun TEXT/VARCHAR sütunlarını INFORMATION_SCHEMA'dan al
+            $cols = static::getSearchableColumns();
+            if (!empty($cols)) {
+                $likes  = array_map(fn($c) => "`{$c}` LIKE ?", $cols);
+                $where  = 'WHERE (' . implode(' OR ', $likes) . ')';
+                $params = array_fill(0, count($cols), '%' . $search . '%');
+            }
+        }
+
+        $countSql = "SELECT COUNT(*) FROM `{$tbl}` {$where}";
+        $total    = (int) static::query($countSql, $params)->fetchColumn();
+
+        $dataSql  = "SELECT * FROM `{$tbl}` {$where} ORDER BY `{$sort}` {$order} LIMIT {$perPage} OFFSET {$offset}";
+        $rows     = static::query($dataSql, $params)->fetchAll();
+
+        return [
+            'data' => $rows,
+            'meta' => [
+                'page'        => $page,
+                'per_page'    => $perPage,
+                'total'       => $total,
+                'total_pages' => (int) ceil($total / $perPage),
+            ],
+        ];
+    }
+
+    /**
+     * Tablonun aranabilir (metin) sütun adlarını döner.
+     * Sonuç istek başına bir kez hesaplanır (basit bellek cache).
+     */
+    private static array $_searchableCache = [];
+
+    private static function getSearchableColumns(): array
+    {
+        $tbl = static::$table;
+        if (isset(self::$_searchableCache[$tbl])) {
+            return self::$_searchableCache[$tbl];
+        }
+
+        try {
+            $rows = static::query(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME   = ?
+                   AND DATA_TYPE IN ('char','varchar','text','tinytext','mediumtext','longtext')",
+                [$tbl]
+            )->fetchAll(\PDO::FETCH_COLUMN);
+
+            self::$_searchableCache[$tbl] = $rows ?: [];
+        } catch (\Throwable) {
+            self::$_searchableCache[$tbl] = [];
+        }
+
+        return self::$_searchableCache[$tbl];
     }
 
     /**
@@ -108,10 +199,16 @@ class BaseModel
 
     /**
      * Yeni kayıt ekler, eklenen satırın ID'sini döner.
-     * $data dizi anahtarları = sütun adları.
+     * $timestamps = true ise created_at ve updated_at otomatik set edilir.
      */
     public static function create(array $data): int
     {
+        if (static::$timestamps) {
+            $now = date('Y-m-d H:i:s');
+            $data['created_at'] = $data['created_at'] ?? $now;
+            $data['updated_at'] = $data['updated_at'] ?? $now;
+        }
+
         $tbl     = static::$table;
         $cols    = array_keys($data);
         $holders = array_fill(0, count($cols), '?');
@@ -128,12 +225,16 @@ class BaseModel
 
     /**
      * ID'ye göre kaydı günceller.
-     * $data dizi anahtarları = güncellenecek sütun adları.
+     * $timestamps = true ise updated_at otomatik set edilir.
      */
     public static function update(int $id, array $data): int
     {
-        $tbl  = static::$table;
-        $sets = implode(', ', array_map(fn($c) => "`{$c}` = ?", array_keys($data)));
+        if (static::$timestamps) {
+            $data['updated_at'] = $data['updated_at'] ?? date('Y-m-d H:i:s');
+        }
+
+        $tbl    = static::$table;
+        $sets   = implode(', ', array_map(fn($c) => "`{$c}` = ?", array_keys($data)));
         $params = array_merge(array_values($data), [$id]);
 
         $stmt = static::query("UPDATE `{$tbl}` SET {$sets} WHERE id = ?", $params);
