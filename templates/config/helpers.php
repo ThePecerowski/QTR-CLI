@@ -179,8 +179,8 @@ if (!function_exists('asset')) {
     function asset(string $path): string
     {
         $absPath = QTR_ROOT . '/public/' . ltrim($path, '/');
-        $version = file_exists($absPath) ? filemtime($absPath) : 0;
-        return '/public/' . ltrim($path, '/') . ($version ? "?v={$version}" : '');
+        $version = file_exists($absPath) ? substr(md5((string) filemtime($absPath)), 0, 8) : '0';
+        return '/public/' . ltrim($path, '/') . "?v={$version}";
     }
 }
 

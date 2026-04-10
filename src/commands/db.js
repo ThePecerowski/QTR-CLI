@@ -590,6 +590,151 @@ function cmdRun(projectRoot, cfg, isForce) {
   }
 }
 
+// ─── db:seed ──────────────────────────────────────────────────────────────────
+
+function cmdSeed(projectRoot, cfg, targetClass) {
+  if (!cfg || !cfg.db) {
+    console.error('[QTR] .qtr.json içinde "db" yapılandırması bulunamadı.');
+    process.exitCode = 1; return;
+  }
+
+  const phpPath   = cfg?.php || '';
+  const seedersDir = path.join(projectRoot, 'database', 'seeders');
+
+  if (!phpPath || !fs.existsSync(phpPath)) {
+    console.error('[QTR] PHP binary bulunamadı!');
+    console.error(`      .qtr.json dosyasındaki "php" alanını güncelleyin.`);
+    process.exitCode = 1; return;
+  }
+
+  if (!fs.existsSync(seedersDir)) {
+    console.error('[QTR] database/seeders/ dizini bulunamadı.');
+    console.error('      Oluşturmak için: qtr db:make-seeder <ad>');
+    process.exitCode = 1; return;
+  }
+
+  let seederFiles = fs.readdirSync(seedersDir)
+    .filter(f => f.endsWith('.php'))
+    .sort();
+
+  if (targetClass) {
+    const match = seederFiles.find(f =>
+      f.toLowerCase() === (targetClass.toLowerCase() + '.php') ||
+      f.toLowerCase() === targetClass.toLowerCase()
+    );
+    if (!match) {
+      console.error(`[QTR] Seeder bulunamadı: ${targetClass}`);
+      process.exitCode = 1; return;
+    }
+    seederFiles = [match];
+  }
+
+  if (seederFiles.length === 0) {
+    console.log('[QTR] Çalıştırılacak seeder bulunamadı.');
+    console.log('      Oluşturmak için: qtr db:make-seeder <ad>');
+    return;
+  }
+
+  const seedRunner = path.join(projectRoot, 'app', 'scripts', 'php', 'seed-runner.php');
+  if (!fs.existsSync(seedRunner)) {
+    console.error('[QTR] seed-runner.php bulunamadı: app/scripts/php/seed-runner.php');
+    process.exitCode = 1; return;
+  }
+
+  const qtrJsonPath = path.join(projectRoot, QTR_JSON);
+  console.log('\n🌱 Running seeders...\n');
+
+  let ok = 0, failed = 0;
+
+  for (const file of seederFiles) {
+    const seederPath = path.join(seedersDir, file);
+    try {
+      const result = execFileSync(phpPath, [seedRunner, qtrJsonPath, seederPath], {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      if (result.trim()) console.log(result.trim());
+      ok++;
+    } catch (err) {
+      const errMsg = (err.stderr || err.stdout || err.message || '').trim();
+      console.error(`  ✗ ${file}: ${errMsg.split('\n')[0]}`);
+      appendLog(projectRoot, `SEED HATA: ${file} — ${errMsg}`);
+      failed++;
+    }
+  }
+
+  console.log(`\n${failed === 0 ? '✓' : '✗'} Seeding ${failed === 0 ? 'tamamlandı' : 'hatalarla tamamlandı'} — ${ok} başarılı, ${failed} hatalı\n`);
+  if (failed > 0) process.exitCode = 1;
+}
+
+// ─── db:make-seeder ────────────────────────────────────────────────────────────
+
+function cmdMakeSeeder(projectRoot, name) {
+  if (!name) {
+    console.error('[QTR] Kullanım: qtr db:make-seeder <ad>');
+    console.error('      Örn: qtr db:make-seeder Users');
+    process.exitCode = 1; return;
+  }
+
+  if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+    console.error(`[QTR] Geçersiz seeder adı: "${name}"`);
+    process.exitCode = 1; return;
+  }
+
+  const className  = name.endsWith('Seeder') ? name : name + 'Seeder';
+  const seedersDir = path.join(projectRoot, 'database', 'seeders');
+  const filePath   = path.join(seedersDir, `${className}.php`);
+
+  fs.mkdirSync(seedersDir, { recursive: true });
+
+  if (fs.existsSync(filePath)) {
+    console.log(`[QTR] Uyarı: ${className}.php zaten mevcut!`);
+    return;
+  }
+
+  const tableName = name.toLowerCase().replace(/seeder$/i, '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '') + 's';
+
+  const content = `<?php
+/**
+ * QTR Framework — Seeder
+ * Sınıf: ${className}
+ * Tablo: ${tableName}
+ * Çalıştırmak için: qtr db:seed --class=${className}
+ */
+class ${className}
+{
+    public function run(PDO $pdo): void
+    {
+        // Örnek veri
+        $data = [
+            // ['sütun1' => 'değer1', 'sütun2' => 'değer2'],
+        ];
+
+        if (empty($data)) {
+            echo "  ⚠  ${className}: veri tanımlanmamış\\n";
+            return;
+        }
+
+        $columns = implode(', ', array_map(fn($k) => "\`{$k}\`", array_keys($data[0])));
+        $placeholders = implode(', ', array_fill(0, count($data[0]), '?'));
+        $stmt = $pdo->prepare("INSERT INTO \`${tableName}\` ({$columns}) VALUES ({$placeholders})");
+
+        $count = 0;
+        foreach ($data as $row) {
+            $stmt->execute(array_values($row));
+            $count++;
+        }
+
+        echo "  ✓ ${className}: {$count} kayıt eklendi\\n";
+    }
+}
+`;
+
+  fs.writeFileSync(filePath, content, 'utf-8');
+  console.log(`[QTR] Seeder oluşturuldu: database/seeders/${className}.php`);
+  console.log(`      Çalıştırmak: qtr db:seed --class=${className}`);
+}
+
 // ─── Ana execute ─────────────────────────────────────────────────────────────
 
 function execute(params) {
@@ -652,6 +797,19 @@ function execute(params) {
     return;
   }
 
+  if (sub === 'seed') {
+    const cfg         = readQtrJson(projectRoot);
+    const targetClass = params.class ? String(params.class) : null;
+    cmdSeed(projectRoot, cfg, targetClass);
+    return;
+  }
+
+  if (sub === 'make-seeder') {
+    const name = params.args[0];
+    cmdMakeSeeder(projectRoot, name);
+    return;
+  }
+
   if (sub === 'run') {
     const cfg = readQtrJson(projectRoot);
     cmdRun(projectRoot, cfg, params.force === true);
@@ -659,7 +817,7 @@ function execute(params) {
   }
 
   console.error(`[QTR] Bilinmeyen db alt komutu: "${sub}"`);
-  console.error('      Geçerli: db:create <ad>  db:list  db:migrate  db:rollback  db:reset  db:make-migration <ad>  db:run');
+  console.error('      Geçerli: db:create  db:list  db:migrate  db:rollback  db:reset  db:make-migration  db:seed  db:make-seeder  db:run');
   process.exitCode = 1;
 }
 

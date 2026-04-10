@@ -43,6 +43,7 @@ const SCAFFOLD_DIRS = [
   'app/admin/middleware',
   'app/admin/services',
   'database',
+  'database/seeders',
   'storage/logs',
   'storage/backups',
   'storage/cache',
@@ -395,6 +396,39 @@ function scaffoldProject(projectPath, config, isDryRun) {
   const logsViewDest = path.join(projectPath, 'resources/views/admin/logs.php');
   if (fs.existsSync(logsViewSrc) && !fs.existsSync(logsViewDest)) {
     fs.copyFileSync(logsViewSrc, logsViewDest);
+  }
+
+  // Cache.php — dosya tabanlı cache sistemi (Cache::get/put/remember/forget/flush)
+  const cacheSrc = path.join(TEMPLATES_DIR, 'config', 'Cache.php');
+  if (fs.existsSync(cacheSrc)) {
+    fs.copyFileSync(cacheSrc, path.join(projectPath, 'app/core/Cache.php'));
+  }
+
+  // public/ alt dizinleri — CSS/JS/images statik dosyalar için
+  for (const d of ['public/css', 'public/js', 'public/images']) {
+    fs.mkdirSync(path.join(projectPath, d), { recursive: true });
+  }
+
+  // Varsayılan style.css — boş başlangıç CSS dosyası
+  const defaultCss = path.join(TEMPLATES_DIR, 'config', 'style.css');
+  const destCss    = path.join(projectPath, 'public/css/style.css');
+  if (fs.existsSync(defaultCss)) {
+    fs.copyFileSync(defaultCss, destCss);
+  } else {
+    fs.writeFileSync(destCss, '/* QTR Framework — Başlangıç CSS dosyası */\n', 'utf-8');
+  }
+
+  // database/seeders/ dizinini oluştur + UsersSeeder.php kopyala
+  fs.mkdirSync(path.join(projectPath, 'database/seeders'), { recursive: true });
+  const usersSeederSrc = path.join(TEMPLATES_DIR, 'config', 'seeders', 'UsersSeeder.php');
+  if (fs.existsSync(usersSeederSrc)) {
+    fs.copyFileSync(usersSeederSrc, path.join(projectPath, 'database/seeders/UsersSeeder.php'));
+  }
+
+  // seed-runner.php — CLI seedleri PHP ile çalıştıran yardımcı
+  const seedRunnerSrc = path.join(TEMPLATES_DIR, 'config', 'seed-runner.php');
+  if (fs.existsSync(seedRunnerSrc)) {
+    fs.copyFileSync(seedRunnerSrc, path.join(projectPath, 'app/scripts/php/seed-runner.php'));
   }
 }
 
