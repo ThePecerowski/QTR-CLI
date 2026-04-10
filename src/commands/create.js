@@ -377,6 +377,25 @@ function scaffoldProject(projectPath, config, isDryRun) {
       }
     }
   }
+
+  // helpers.php — global yardımcı fonksiyonlar (view, redirect, config, env, dd ...)
+  const helpersSrc = path.join(TEMPLATES_DIR, 'config', 'helpers.php');
+  if (fs.existsSync(helpersSrc)) {
+    fs.copyFileSync(helpersSrc, path.join(projectPath, 'app/core/helpers.php'));
+  }
+
+  // LogViewerController.php — admin log viewer controller
+  const logCtrlSrc = path.join(TEMPLATES_DIR, 'config', 'LogViewerController.php');
+  if (fs.existsSync(logCtrlSrc)) {
+    fs.copyFileSync(logCtrlSrc, path.join(projectPath, 'app/admin/controllers/LogViewerController.php'));
+  }
+
+  // logs.php view — admin log viewer view (admin/ dizininde zaten kopyalanıyor, yedek olarak)
+  const logsViewSrc  = path.join(TEMPLATES_DIR, 'config', 'admin', 'views', 'logs.php');
+  const logsViewDest = path.join(projectPath, 'resources/views/admin/logs.php');
+  if (fs.existsSync(logsViewSrc) && !fs.existsSync(logsViewDest)) {
+    fs.copyFileSync(logsViewSrc, logsViewDest);
+  }
 }
 
 // ─── Ana execute ─────────────────────────────────────────────────────────────

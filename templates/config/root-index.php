@@ -16,6 +16,11 @@ require_once QTR_ROOT . '/app/core/Config.php';
 require_once QTR_ROOT . '/app/core/Autoloader.php';
 QtrAutoloader::init();
 
+// Global yardımcı fonksiyonlar (view, redirect, config, env, dd ...)
+if (file_exists(QTR_ROOT . '/app/core/helpers.php')) {
+    require_once QTR_ROOT . '/app/core/helpers.php';
+}
+
 // Hata işleyicisini kaydet (APP_DEBUG'a göre detaylı veya kullanıcı dostu hata)
 ErrorHandler::register();
 

@@ -35,6 +35,10 @@ $adminRouter->group(['middleware' => ['admin']], function ($r) {
     $r->get('/admin',           'AdminDashboardController@index');
     $r->get('/admin/dashboard', 'AdminDashboardController@index');
 
+    // ─── Log Viewer ──────────────────────────────────────────────────────────
+    $r->get('/admin/logs',         'LogViewerController@index');
+    $r->get('/admin/logs/content', 'LogViewerController@getContent');
+
     // ─── Modüller (qtr admin:add-module ile eklenecek) ─────────────────────
     // $r->get('/admin/users',            'AdminUsersController@index');
     // $r->get('/admin/users/{id}',       'AdminUsersController@show');
